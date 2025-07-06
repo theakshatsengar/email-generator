@@ -119,19 +119,43 @@ Return ONLY the JSON object. No explanations, no markdown formatting, just the J
         response_text = completion.choices[0].message.content.strip()
         print(f"LLM response received (length: {len(response_text)})")
         
-        # Clean response and parse JSON
-        if response_text.startswith("```json"):
-            response_text = response_text[7:]
-        if response_text.endswith("```"):
-            response_text = response_text[:-3]
+        # Clean response and extract JSON
+        cleaned_response = response_text
+        
+        # Remove markdown code blocks
+        if cleaned_response.startswith("```json"):
+            cleaned_response = cleaned_response[7:]
+        if cleaned_response.endswith("```"):
+            cleaned_response = cleaned_response[:-3]
+            
+        # Remove any text before the JSON object
+        json_start = cleaned_response.find('{')
+        if json_start != -1:
+            cleaned_response = cleaned_response[json_start:]
+        
+        # Find the end of the JSON object
+        brace_count = 0
+        json_end = -1
+        for i, char in enumerate(cleaned_response):
+            if char == '{':
+                brace_count += 1
+            elif char == '}':
+                brace_count -= 1
+                if brace_count == 0:
+                    json_end = i + 1
+                    break
+        
+        if json_end != -1:
+            cleaned_response = cleaned_response[:json_end]
         
         try:
-            parsed_json = json.loads(response_text.strip())
+            parsed_json = json.loads(cleaned_response.strip())
             print("JSON parsed successfully")
             return parsed_json
         except json.JSONDecodeError as json_error:
             print(f"JSON parsing error: {json_error}")
-            print(f"Response text: {response_text[:500]}...")
+            print(f"Original response: {response_text[:500]}...")
+            print(f"Cleaned response: {cleaned_response[:500]}...")
             raise Exception(f"Invalid JSON response from LLM: {json_error}")
         
     except Exception as e:
