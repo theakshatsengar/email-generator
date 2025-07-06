@@ -27,6 +27,7 @@ interface EmailTemplate {
   subject: string
   content: string
   tone: string
+  size?: string
 }
 
 interface DashboardProps {
@@ -63,6 +64,10 @@ export function Dashboard({ userInfo, onLogout, onUpdateInfo }: DashboardProps) 
     { value: "casual", label: "Casual" },
     { value: "appreciative", label: "Appreciative" },
     { value: "collaborative", label: "Collaborative" },
+    { value: "enthusiastic", label: "Enthusiastic" },
+    { value: "confident", label: "Confident" },
+    { value: "empathetic", label: "Empathetic" },
+    { value: "persuasive", label: "Persuasive" },
   ]
 
   const generateEmails = async () => {

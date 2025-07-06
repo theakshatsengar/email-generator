@@ -151,8 +151,8 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
                   <Star className="h-5 w-5 text-yellow-500 fill-current" />
                 </div>
                 <blockquote className="text-lg font-medium">
-                  "I went from getting ignored to having hiring managers fight over me. The difference was night and
-                  day."
+                  &ldquo;I went from getting ignored to having hiring managers fight over me. The difference was night and
+                  day.&rdquo;
                 </blockquote>
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center">
@@ -246,24 +246,24 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
             <Card className="p-6">
               <div className="flex items-center space-x-2 mb-4">
                 <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <span className="text-sm font-medium text-green-600 dark:text-green-400">Soham's Method</span>
+                <span className="text-sm font-medium text-green-600 dark:text-green-400">Soham&apos;s Method</span>
               </div>
               <div className="bg-muted/50 p-4 rounded-lg text-sm">
                 <div className="font-medium mb-2">Subject: RE:Engineering at Happenstance.</div>
-                <div className="text-muted-foreground">
-                  tldr,
-                  <br />
-                  <br />I love everything about what Happenstance is doing. I don't have many hobbies outside coding. I
-                  am not athletic, bad at singing, don't drink, can't dance. Building is the only thing I am good at. At
-                  this point, I want to be a part of taking something from O&gt;1 or 1&gt;100. I just want to be heads
-                  down chasing that goal
-                  <br />
-                  <br />
-                  hi,
-                  <br />
-                  <br />
-                  Really loved what you were building at Happenstance and wanted to reach out to see if there were any openings for Engineers in the early team...
-                </div>
+                                  <div className="text-muted-foreground">
+                    tldr,
+                    <br />
+                    <br />I love everything about what Happenstance is doing. I don&apos;t have many hobbies outside coding. I
+                    am not athletic, bad at singing, don&apos;t drink, can&apos;t dance. Building is the only thing I am good at. At
+                    this point, I want to be a part of taking something from O&gt;1 or 1&gt;100. I just want to be heads
+                    down chasing that goal
+                    <br />
+                    <br />
+                    hi,
+                    <br />
+                    <br />
+                    Really loved what you were building at Happenstance and wanted to reach out to see if there were any openings for Engineers in the early team...
+                  </div>
               </div>
               <div className="mt-4 text-xs text-muted-foreground">Response rate: ~90%</div>
             </Card>
@@ -276,7 +276,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl font-bold mb-4">Ready to transform your emails?</h2>
           <p className="text-lg text-muted-foreground mb-8">
-            Join thousands of professionals who've upgraded their email game
+            Join thousands of professionals who&apos;ve upgraded their email game
           </p>
 
           <Card className="p-8 bg-gradient-to-r from-primary/5 to-secondary/5 border-primary/20">

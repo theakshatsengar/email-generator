@@ -6,11 +6,19 @@ import { Dashboard } from "@/components/dashboard"
 import { PersonalInfoModal } from "@/components/personal-info-modal"
 import { LandingPage } from "@/components/landing-page"
 
+interface UserInfo {
+  name?: string
+  email?: string
+  company?: string
+  position?: string
+  location?: string
+  bio?: string
+}
+
 export default function Home() {
   const [currentPage, setCurrentPage] = useState("landing") // landing, login, dashboard
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [showPersonalInfo, setShowPersonalInfo] = useState(false)
-  const [userInfo, setUserInfo] = useState(null)
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null)
 
   useEffect(() => {
     // Check if user is logged in (in real app, check auth state)
@@ -18,7 +26,6 @@ export default function Home() {
     const savedUserInfo = localStorage.getItem("userInfo")
 
     if (loggedIn) {
-      setIsLoggedIn(true)
       setCurrentPage("dashboard")
       if (savedUserInfo) {
         setUserInfo(JSON.parse(savedUserInfo))
@@ -33,7 +40,6 @@ export default function Home() {
   }
 
   const handleLogin = () => {
-    setIsLoggedIn(true)
     setCurrentPage("dashboard")
     localStorage.setItem("isLoggedIn", "true")
 
@@ -44,14 +50,13 @@ export default function Home() {
     }
   }
 
-  const handlePersonalInfoSave = (info: any) => {
+  const handlePersonalInfoSave = (info: UserInfo) => {
     setUserInfo(info)
     localStorage.setItem("userInfo", JSON.stringify(info))
     setShowPersonalInfo(false)
   }
 
   const handleLogout = () => {
-    setIsLoggedIn(false)
     setCurrentPage("landing")
     localStorage.removeItem("isLoggedIn")
     localStorage.removeItem("userInfo")

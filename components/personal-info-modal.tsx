@@ -11,63 +11,27 @@ import { Textarea } from "@/components/ui/textarea"
 import { User, Briefcase } from "lucide-react"
 import { PDF_PARSER_URL } from "@/config/microservice"
 
-function extractInfoFromResume(text: string) {
-  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-  let name = "";
-  let email = "";
-  let phone = "";
-  let linkedin = "";
-  let website = "";
-  let location = "";
-
-  // Email
-  const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-  if (emailMatch) email = emailMatch[0];
-
-  // Phone (simple international/US formats)
-  const phoneMatch = text.match(/(\+\d{1,3}[-.\s]?)?(\(?\d{3}\)?[-.\s]?)?\d{3}[-.\s]?\d{4}/);
-  if (phoneMatch) phone = phoneMatch[0];
-
-  // LinkedIn
-  const linkedinMatch = text.match(/https?:\/\/(www\.)?linkedin\.com\/[a-zA-Z0-9\-_/]+/);
-  if (linkedinMatch) linkedin = linkedinMatch[0];
-
-  // Website (first non-LinkedIn http(s) link)
-  const websiteMatch = text.match(/https?:\/\/(?!www\.linkedin\.com)[a-zA-Z0-9./?=_-]+/);
-  if (websiteMatch) website = websiteMatch[0];
-
-  // Name: first non-empty line that isn't email/phone/link
-  for (const line of lines) {
-    if (
-      line &&
-      !line.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/) &&
-      !line.match(/(\+\d{1,3}[-.\s]?)?(\(?\d{3}\)?[-.\s]?)?\d{3}[-.\s]?\d{4}/) &&
-      !line.match(/https?:\/\//)
-    ) {
-      name = line;
-      break;
-    }
-  }
-
-  // Location: look for a line with a city/state/country (very basic)
-  for (const line of lines) {
-    if (line.match(/\b([A-Z][a-z]+,?\s?)+([A-Z]{2,})?\b/)) {
-      location = line;
-      break;
-    }
-  }
-
-  return { name, email, phone, linkedin, website, location };
+interface UserInfo {
+  name?: string
+  email?: string
+  phone?: string
+  company?: string
+  position?: string
+  location?: string
+  bio?: string
+  website?: string
+  linkedin?: string
+  title?: string
 }
 
 interface PersonalInfoModalProps {
-  initialInfo: any
-  onSave: (info: any) => void
+  initialInfo: UserInfo | null
+  onSave: (info: UserInfo) => void
   onClose: () => void
 }
 
 export function PersonalInfoModal({ initialInfo, onSave, onClose }: PersonalInfoModalProps) {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<UserInfo>({
     name: initialInfo?.name || "",
     email: initialInfo?.email || "",
     phone: initialInfo?.phone || "",
@@ -77,44 +41,44 @@ export function PersonalInfoModal({ initialInfo, onSave, onClose }: PersonalInfo
     bio: initialInfo?.bio || "",
     website: initialInfo?.website || "",
     linkedin: initialInfo?.linkedin || "",
-    ...initialInfo,
+    title: initialInfo?.title || "",
   })
-  const [resumeText, setResumeText] = useState("");
-  const [resumeFileName, setResumeFileName] = useState("");
-  const [resumeLoading, setResumeLoading] = useState(false);
+  const [resumeText, setResumeText] = useState("")
+  const [resumeFileName, setResumeFileName] = useState("")
+  const [resumeLoading, setResumeLoading] = useState(false)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     onSave(formData)
   }
 
-  const handleChange = (field: string, value: string) => {
-    setFormData((prev: any) => ({ ...prev, [field]: value }))
+  const handleChange = (field: keyof UserInfo, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
   // NEW: Upload to Python microservice and parse
   const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setResumeFileName(file.name);
-    setResumeLoading(true);
+    const file = e.target.files?.[0]
+    if (!file) return
+    setResumeFileName(file.name)
+    setResumeLoading(true)
     try {
-      const formData = new FormData();
-      formData.append("file", file);
+      const formData = new FormData()
+      formData.append("file", file)
       
       const res = await fetch(`${PDF_PARSER_URL}/parse-resume`, {
         method: "POST",
         body: formData,
-      });
+      })
       
       if (!res.ok) {
-        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`)
       }
       
-      const data = await res.json();
+      const data = await res.json()
       
       // The microservice returns structured data directly
-      setFormData((prev: any) => ({
+      setFormData((prev) => ({
         ...prev,
         name: prev.name || data.name || "",
         email: prev.email || data.email || "",
@@ -126,17 +90,18 @@ export function PersonalInfoModal({ initialInfo, onSave, onClose }: PersonalInfo
         bio: prev.bio || data.bio || "",
         website: prev.website || data.website || "",
         linkedin: prev.linkedin || data.linkedin || "",
-      }));
+      }))
       
       // Show success message
-      setResumeText("✅ Resume parsed successfully! Your information has been auto-filled.");
+      setResumeText("✅ Resume parsed successfully! Your information has been auto-filled.")
       
-    } catch (err: any) {
-      setResumeText("❌ Failed to parse PDF: " + (err?.message || err?.toString() || "Unknown error"));
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error"
+      setResumeText("❌ Failed to parse PDF: " + errorMessage)
     } finally {
-      setResumeLoading(false);
+      setResumeLoading(false)
     }
-  };
+  }
 
   return (
     <Dialog open={true} onOpenChange={onClose}>

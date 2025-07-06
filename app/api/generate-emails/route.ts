@@ -23,6 +23,31 @@ function detectIntent(prompt: string): "reply" | "application" | "outreach" | "o
   return "other"
 }
 
+function getToneInstructions(tone: string): string {
+  const toneMap: Record<string, string> = {
+    professional: `TONE: Professional and polished. Use formal language, clear structure, and business-appropriate vocabulary. Maintain a respectful and authoritative tone while being approachable.`,
+    friendly: `TONE: Warm and approachable. Use conversational language, contractions, and personal touches. Be enthusiastic and genuine while maintaining professionalism.`,
+    formal: `TONE: Very formal and traditional. Use complete sentences, avoid contractions, and employ sophisticated vocabulary. Maintain a respectful and dignified tone.`,
+    casual: `TONE: Relaxed and informal. Use conversational language, contractions, and casual expressions. Be friendly and laid-back while still being respectful.`,
+    appreciative: `TONE: Grateful and warm. Express genuine appreciation and gratitude. Use positive language and focus on the value received or the relationship.`,
+    collaborative: `TONE: Partnership-focused and inclusive. Emphasize working together, shared goals, and mutual benefits. Use "we" language and collaborative expressions.`,
+    enthusiastic: `TONE: Energetic and excited. Use exclamation marks sparingly, positive language, and convey genuine excitement about the opportunity or connection.`,
+    confident: `TONE: Self-assured and assertive. Use strong, decisive language while remaining respectful. Express certainty about capabilities and value proposition.`,
+    empathetic: `TONE: Understanding and compassionate. Acknowledge the recipient's perspective, show understanding of their situation, and offer genuine support or solutions.`,
+    persuasive: `TONE: Convincing and compelling. Use strong arguments, evidence, and benefits-focused language. Create urgency and desire while remaining ethical and respectful.`
+  }
+  return toneMap[tone.toLowerCase()] || toneMap.professional
+}
+
+function getSizeInstructions(): string {
+  return `VARIATIONS: Create 5 different email variations with varying lengths:
+1. Concise (2-3 sentences) - Direct and to the point
+2. Brief (4-5 sentences) - Short but complete
+3. Standard (6-8 sentences) - Typical email length
+4. Detailed (9-12 sentences) - More comprehensive
+5. Comprehensive (13+ sentences) - Thorough and detailed`
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { prompt, tone, userInfo } = await request.json()
@@ -47,15 +72,31 @@ export async function POST(request: NextRequest) {
       formatInstructions = `You are writing a professional outreach or business email. Use a concise, human, and warm tone. Structure the email with a clear subject, a brief intro, the main message, and a polite closing. Do NOT use the job application format.\n\n---\nSubject: [Direct, specific to the opportunity]\n\nHi [Recipient Name],\n\n[Paragraph 1: Brief intro and context.]\n\n[Paragraph 2: Main message, request, or value proposition.]\n\n[Closing: Polite sign-off, openness to connect, or next steps.]\n\nBest,\n[Your Name]\n---`;
     }
 
+    const selectedTone = tone || "professional"
+    const toneInstructions = getToneInstructions(selectedTone)
+    const sizeInstructions = getSizeInstructions()
+
     const systemPrompt = `
 ${formatInstructions}
+
+${toneInstructions}
+
+${sizeInstructions}
 
 Key principles:
 1. Personal storytelling that creates genuine connection
 2. Specific value propositions tailored to each opportunity  
 3. Strategic follow-up sequences that maintain momentum
-4. Professional tone variations for different contexts
-5. Always include specific, actionable next steps
+4. Always include specific, actionable next steps
+5. Each variation should maintain the selected tone while varying in length and approach
+
+FORMATTING REQUIREMENTS:
+- Use proper line breaks (\\n) between paragraphs
+- Include appropriate spacing for readability
+- Use proper indentation where needed
+- Ensure the email content is well-formatted with clear paragraph separation
+- Each paragraph should be separated by a blank line
+- Maintain professional email formatting with proper spacing
 
 User Information:
 ${
@@ -71,7 +112,7 @@ ${
     : "No user information provided"
 }
 
-Generate exactly 5 different email templates based on the user's prompt. Each email should have a different approach and tone (Professional, Friendly, Formal, Appreciative, Collaborative).
+Generate exactly 5 different email templates based on the user's prompt. Each email should maintain the "${selectedTone}" tone but vary in length and approach.
 
 Return the response as a JSON array with this exact structure:
 [
@@ -79,40 +120,50 @@ Return the response as a JSON array with this exact structure:
     "id": 1,
     "subject": "Email subject line",
     "content": "Full email content with proper formatting and line breaks",
-    "tone": "Professional"
+    "tone": "${selectedTone}",
+    "size": "Concise"
   },
   {
     "id": 2,
     "subject": "Email subject line", 
     "content": "Full email content with proper formatting and line breaks",
-    "tone": "Friendly"
+    "tone": "${selectedTone}",
+    "size": "Brief"
   },
   {
     "id": 3,
     "subject": "Email subject line",
     "content": "Full email content with proper formatting and line breaks", 
-    "tone": "Formal"
+    "tone": "${selectedTone}",
+    "size": "Standard"
   },
   {
     "id": 4,
     "subject": "Email subject line",
     "content": "Full email content with proper formatting and line breaks",
-    "tone": "Appreciative"
+    "tone": "${selectedTone}",
+    "size": "Detailed"
   },
   {
     "id": 5,
     "subject": "Email subject line",
     "content": "Full email content with proper formatting and line breaks",
-    "tone": "Collaborative"
+    "tone": "${selectedTone}",
+    "size": "Comprehensive"
   }
 ]
 
-IMPORTANT: Return ONLY the JSON array. Do not include any markdown formatting, explanations, or additional text. The response must be valid JSON that can be parsed directly.
+IMPORTANT: 
+- Return ONLY the JSON array. Do not include any markdown formatting, explanations, or additional text.
+- The response must be valid JSON that can be parsed directly.
+- Ensure the "content" field includes proper line breaks (\\n) and formatting for readability.
 `
 
     const userPrompt = `Generate 5 email templates for this scenario: ${prompt}
 
-Preferred tone: ${tone || "professional"}
+Selected tone: ${selectedTone}
+
+IMPORTANT FORMATTING: Ensure each email has proper line breaks (\\n) between paragraphs, appropriate spacing, and professional formatting. Each paragraph should be separated by a blank line for readability.
 
 Please create emails that follow the above method and return them in the exact JSON format specified. Return ONLY the JSON array.`
 

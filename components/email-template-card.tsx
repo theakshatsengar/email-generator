@@ -13,6 +13,7 @@ interface EmailTemplateCardProps {
     subject: string
     content: string
     tone: string
+    size?: string
   }
 }
 
@@ -29,7 +30,7 @@ export function EmailTemplateCard({ template }: EmailTemplateCardProps) {
       await navigator.clipboard.writeText(textToCopy)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
-    } catch (err) {
+    } catch {
       const textArea = document.createElement("textarea")
       textArea.value = textToCopy
       document.body.appendChild(textArea)
@@ -58,19 +59,44 @@ export function EmailTemplateCard({ template }: EmailTemplateCardProps) {
   const getToneColor = (tone: string) => {
     switch (tone.toLowerCase()) {
       case "professional":
-        return "bg-primary/10 text-primary"
+        return "bg-primary/10 text-primary border-primary/20"
       case "friendly":
-        return "bg-green-500/10 text-green-600 dark:text-green-400"
+        return "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20"
       case "formal":
-        return "bg-blue-500/10 text-blue-600 dark:text-blue-400"
+        return "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
       case "casual":
-        return "bg-orange-500/10 text-orange-600 dark:text-orange-400"
+        return "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20"
       case "appreciative":
-        return "bg-purple-500/10 text-purple-600 dark:text-purple-400"
+        return "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20"
       case "collaborative":
-        return "bg-pink-500/10 text-pink-600 dark:text-pink-400"
+        return "bg-pink-500/10 text-pink-600 dark:text-pink-400 border-pink-500/20"
+      case "enthusiastic":
+        return "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20"
+      case "confident":
+        return "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20"
+      case "empathetic":
+        return "bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20"
+      case "persuasive":
+        return "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20"
       default:
-        return "bg-muted text-muted-foreground"
+        return "bg-muted text-muted-foreground border-muted"
+    }
+  }
+
+  const getSizeColor = (size: string) => {
+    switch (size?.toLowerCase()) {
+      case "concise":
+        return "bg-gray-500/10 text-gray-600 dark:text-gray-400 border-gray-500/20"
+      case "brief":
+        return "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
+      case "standard":
+        return "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20"
+      case "detailed":
+        return "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20"
+      case "comprehensive":
+        return "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20"
+      default:
+        return "bg-muted text-muted-foreground border-muted"
     }
   }
 
@@ -92,7 +118,13 @@ export function EmailTemplateCard({ template }: EmailTemplateCardProps) {
               <CardTitle className="text-sm font-medium leading-tight line-clamp-2">{editedSubject}</CardTitle>
             )}
           </div>
-          <Badge className={`text-xs ${getToneColor(template.tone)} shrink-0 border-0`}>{template.tone}</Badge>
+          <div className="flex flex-col gap-1 shrink-0">
+            {template.size && (
+              <Badge className={`text-xs ${getSizeColor(template.size)} border`}>
+                {template.size}
+              </Badge>
+            )}
+          </div>
         </div>
       </CardHeader>
 
@@ -105,8 +137,18 @@ export function EmailTemplateCard({ template }: EmailTemplateCardProps) {
               className="min-h-[200px] text-xs resize-none h-full"
             />
           ) : (
-            <div className="text-xs text-muted-foreground leading-relaxed h-full overflow-hidden">
-              <pre className="whitespace-pre-wrap font-sans">{editedContent}</pre>
+            <div className="text-xs text-muted-foreground leading-relaxed h-full overflow-hidden space-y-1">
+              {editedContent.split('\n').map((line, index) => {
+                const trimmedLine = line.trim()
+                if (trimmedLine === '') {
+                  return <div key={index} className="h-2" />
+                }
+                return (
+                  <div key={index} className="whitespace-pre-wrap">
+                    {line}
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>
