@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { EmailTemplateCard } from "@/components/email-template-card"
+import { TemplateSelector, EmailTemplateType } from "@/components/template-selector"
 import { Mail, User, Settings, LogOut, Sparkles, Send } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -39,6 +40,7 @@ export function Dashboard({ userInfo, onLogout, onUpdateInfo }: DashboardProps) 
   const [emailTemplates, setEmailTemplates] = useState<EmailTemplate[]>([])
   const [isGenerating, setIsGenerating] = useState(false)
   const [selectedTone, setSelectedTone] = useState("professional")
+  const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplateType | null>(null)
 
   const templatesRef = useRef<HTMLDivElement | null>(null)
 
@@ -78,6 +80,7 @@ export function Dashboard({ userInfo, onLogout, onUpdateInfo }: DashboardProps) 
         body: JSON.stringify({
           prompt,
           tone: selectedTone,
+          templateType: selectedTemplate?.id,
           userInfo,
         }),
       })
@@ -167,17 +170,46 @@ export function Dashboard({ userInfo, onLogout, onUpdateInfo }: DashboardProps) 
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Textarea
-              placeholder="Example: I want to follow up with a potential client about our web development services and schedule a meeting to discuss their project requirements..."
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              className="min-h-[100px] resize-none text-sm"
-            />
-            <div className="flex flex-col sm:flex-row gap-3 sm:items-end sm:justify-between">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Email Template Type</label>
+                <TemplateSelector
+                  selectedTemplate={selectedTemplate}
+                  onTemplateSelect={setSelectedTemplate}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Email Tone</label>
+                <Select value={selectedTone} onValueChange={setSelectedTone}>
+                  <SelectTrigger className="w-full text-sm">
+                    <SelectValue placeholder="Select tone" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {toneOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Email Description</label>
+              <Textarea
+                placeholder="Example: I want to follow up with a potential client about our web development services and schedule a meeting to discuss their project requirements..."
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                className="min-h-[100px] resize-none text-sm"
+              />
+            </div>
+            
+            <div className="flex justify-end">
               <Button
                 onClick={generateEmails}
-                disabled={!prompt.trim() || isGenerating}
-                className="text-sm order-2 sm:order-1"
+                disabled={!prompt.trim() || !selectedTemplate || isGenerating}
+                className="text-sm"
               >
                 {isGenerating ? (
                   <>
@@ -191,20 +223,6 @@ export function Dashboard({ userInfo, onLogout, onUpdateInfo }: DashboardProps) 
                   </>
                 )}
               </Button>
-              <div className="order-1 sm:order-2">
-                <Select value={selectedTone} onValueChange={setSelectedTone}>
-                  <SelectTrigger className="w-full sm:w-[180px] text-sm">
-                    <SelectValue placeholder="Select tone" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {toneOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value} className="text-sm">
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
           </CardContent>
         </Card>
