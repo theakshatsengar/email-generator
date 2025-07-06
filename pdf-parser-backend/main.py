@@ -38,37 +38,28 @@ def extract_text_from_pdf(pdf_file: bytes) -> str:
 def extract_resume_data_with_groq(text: str) -> Dict[str, Any]:
     """Use Groq LLM to extract structured data from resume text"""
     
-    system_prompt = """You are a resume parser. Extract the following information from the resume text and return it as a JSON object.
+    system_prompt = """You are a resume parser. Extract the following information from the resume text and return ONLY a JSON object.
 
-REQUIRED FIELDS (return all of these):
-{
-  "name": "Full name of the person",
-  "email": "Email address",
-  "phone": "Phone number",
-  "location": "City, State/Country",
-  "company": "Current or most recent company",
-  "position": "Current or most recent job title",
-  "title": "Professional title or headline",
-  "bio": "2-3 sentence professional summary",
-  "website": "Personal website URL",
-  "linkedin": "LinkedIn profile URL"
-}
+Required fields:
+- name: Full name of the person
+- email: Email address
+- phone: Phone number
+- location: City, State/Country
+- company: Current or most recent company
+- position: Current or most recent job title
+- title: Professional title or headline
+- bio: A brief professional summary (2-3 sentences)
+- website: Personal website URL
+- linkedin: LinkedIn profile URL
 
-INSTRUCTIONS:
-1. Parse the resume text carefully
-2. Extract all available information
-3. For missing fields, make reasonable inferences based on context
-4. Generate a professional bio based on their experience
-5. Return ONLY the JSON object, no other text
-
-IMPORTANT: Your response must be valid JSON that can be parsed directly."""
+Return ONLY the JSON object. No explanations, no markdown formatting, just the JSON data."""
 
     try:
         completion = groq_client.chat.completions.create(
             model="llama3-8b-8192",
             messages=[
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"Parse this resume text:\n\n{text}"}
+                {"role": "user", "content": f"Extract all fields from this resume:\n\n{text}"}
             ],
             temperature=0.1,
             max_tokens=1000
@@ -185,18 +176,17 @@ async def parse_resume(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="File must be a PDF")
     
     try:
-        # Step 1: Read and parse the PDF
+        # Step 1: Extract all text from PDF
         pdf_content = await file.read()
-        pdf_text = extract_text_from_pdf(pdf_content)
+        text = extract_text_from_pdf(pdf_content)
         
-        if not pdf_text.strip():
+        if not text.strip():
             raise HTTPException(status_code=400, detail="No text could be extracted from the PDF")
         
-        # Step 2: Send the extracted text to LLM for field generation
-        json_data = extract_resume_data_with_groq(pdf_text)
+        # Step 2: Pass all text to LLM to generate JSON response
+        parsed_data = extract_resume_data_with_groq(text)
         
-        # Step 3: Return the JSON response
-        return json_data
+        return parsed_data
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to process resume: {str(e)}")
