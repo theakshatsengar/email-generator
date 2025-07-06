@@ -31,31 +31,51 @@ def extract_text_and_links_from_pdf(pdf_file: bytes) -> str:
         text = ""
         all_links = []
         
-        for page in pdf_reader.pages:
-            # Extract text
-            page_text = page.extract_text()
-            text += page_text + "\n"
-            
-            # Extract links from annotations (clickable links)
-            if '/Annots' in page:
-                for annot in page['/Annots']:
-                    if annot.get_object()['/Subtype'] == '/Link':
-                        link_obj = annot.get_object()
-                        if '/A' in link_obj and '/URI' in link_obj['/A']:
-                            link_url = link_obj['/A']['/URI']
-                            all_links.append(link_url)
+        for page_num, page in enumerate(pdf_reader.pages):
+            try:
+                # Extract text
+                page_text = page.extract_text()
+                text += page_text + "\n"
+                
+                # Extract links from annotations (clickable links)
+                try:
+                    if '/Annots' in page:
+                        for annot in page['/Annots']:
+                            try:
+                                annot_obj = annot.get_object()
+                                if annot_obj.get('/Subtype') == '/Link':
+                                    if '/A' in annot_obj and '/URI' in annot_obj['/A']:
+                                        link_url = annot_obj['/A']['/URI']
+                                        all_links.append(link_url)
+                            except Exception as annot_error:
+                                print(f"Error processing annotation: {annot_error}")
+                                continue
+                except Exception as annots_error:
+                    print(f"Error processing annotations on page {page_num}: {annots_error}")
+                    continue
+                    
+            except Exception as page_error:
+                print(f"Error processing page {page_num}: {page_error}")
+                continue
         
         # Also extract visible links from text
-        visible_links = re.findall(r'https?://[^\s]+', text)
-        all_links.extend(visible_links)
+        try:
+            visible_links = re.findall(r'https?://[^\s]+', text)
+            all_links.extend(visible_links)
+        except Exception as regex_error:
+            print(f"Error extracting visible links: {regex_error}")
         
         # Remove duplicates and add to text
         unique_links = list(set(all_links))
         if unique_links:
             text += "\n\nAll Links Found:\n" + "\n".join(unique_links)
         
+        if not text.strip():
+            raise Exception("No text could be extracted from the PDF")
+            
         return text.strip()
     except Exception as e:
+        print(f"PDF parsing error: {str(e)}")
         raise HTTPException(status_code=400, detail=f"Failed to parse PDF: {str(e)}")
 
 def generate_json_from_text(text: str) -> dict:
@@ -84,6 +104,8 @@ IMPORTANT:
 Return ONLY the JSON object. No explanations, no markdown formatting, just the JSON data."""
 
     try:
+        print(f"Sending text to LLM (length: {len(text)})")
+        
         completion = groq_client.chat.completions.create(
             model="llama3-8b-8192",
             messages=[
@@ -95,6 +117,7 @@ Return ONLY the JSON object. No explanations, no markdown formatting, just the J
         )
         
         response_text = completion.choices[0].message.content.strip()
+        print(f"LLM response received (length: {len(response_text)})")
         
         # Clean response and parse JSON
         if response_text.startswith("```json"):
@@ -102,9 +125,17 @@ Return ONLY the JSON object. No explanations, no markdown formatting, just the J
         if response_text.endswith("```"):
             response_text = response_text[:-3]
         
-        return json.loads(response_text.strip())
+        try:
+            parsed_json = json.loads(response_text.strip())
+            print("JSON parsed successfully")
+            return parsed_json
+        except json.JSONDecodeError as json_error:
+            print(f"JSON parsing error: {json_error}")
+            print(f"Response text: {response_text[:500]}...")
+            raise Exception(f"Invalid JSON response from LLM: {json_error}")
         
     except Exception as e:
+        print(f"LLM error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to generate JSON: {str(e)}")
 
 @app.post("/parse-resume")
@@ -115,19 +146,29 @@ async def parse_resume(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="File must be a PDF")
     
     try:
+        print(f"Processing PDF: {file.filename}")
+        
         # Step 1: Extract all text and links from PDF
         pdf_content = await file.read()
+        print(f"PDF size: {len(pdf_content)} bytes")
+        
         text = extract_text_and_links_from_pdf(pdf_content)
+        print(f"Extracted text length: {len(text)} characters")
         
         if not text.strip():
             raise HTTPException(status_code=400, detail="No text could be extracted from the PDF")
         
         # Step 2: Generate JSON data using LLM
         json_data = generate_json_from_text(text)
+        print("JSON generation completed successfully")
         
         return json_data
         
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
     except Exception as e:
+        print(f"Unexpected error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to process resume: {str(e)}")
 
 @app.get("/health")
