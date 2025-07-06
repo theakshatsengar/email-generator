@@ -38,31 +38,30 @@ def extract_text_from_pdf(pdf_file: bytes) -> str:
 def extract_resume_data_with_groq(text: str) -> Dict[str, Any]:
     """Use Groq LLM to extract structured data from resume text"""
     
-    system_prompt = """You are an expert resume parser. Your job is to extract ALL the requested information from the resume text. Be thorough and creative in finding information.
+    system_prompt = """You are a resume parser. Extract the following information from the resume text and return it as a JSON object.
 
-IMPORTANT: For each field, if you cannot find the exact information, make a reasonable inference or generate appropriate content based on the resume context.
+REQUIRED FIELDS (return all of these):
+{
+  "name": "Full name of the person",
+  "email": "Email address",
+  "phone": "Phone number",
+  "location": "City, State/Country",
+  "company": "Current or most recent company",
+  "position": "Current or most recent job title",
+  "title": "Professional title or headline",
+  "bio": "2-3 sentence professional summary",
+  "website": "Personal website URL",
+  "linkedin": "LinkedIn profile URL"
+}
 
-Required fields to extract:
-- name: Full name of the person (usually at the top)
-- email: Email address (look for @ symbol)
-- phone: Phone number (any format)
-- location: City, State/Country (look for address or location info)
-- company: Current or most recent company name
-- position: Current or most recent job title/role
-- title: Professional title or headline (e.g., "Software Engineer", "Product Manager")
-- bio: Generate a 2-3 sentence professional summary based on their experience and skills
-- website: Personal website URL (look for http/https links, excluding LinkedIn)
-- linkedin: LinkedIn profile URL (look for linkedin.com links)
+INSTRUCTIONS:
+1. Parse the resume text carefully
+2. Extract all available information
+3. For missing fields, make reasonable inferences based on context
+4. Generate a professional bio based on their experience
+5. Return ONLY the JSON object, no other text
 
-EXTRACTION RULES:
-1. For bio: Create a compelling professional summary based on their experience, skills, and achievements
-2. For title: Extract their main professional title or create one based on their role
-3. For location: Look for city, state, or country mentions
-4. For website: Find any personal website, portfolio, or GitHub links
-5. For linkedin: Find LinkedIn profile URL
-6. If a field is truly not found, use null, but try to be thorough
-
-Return ONLY a valid JSON object with all these fields. Do not include any explanations or markdown formatting."""
+IMPORTANT: Your response must be valid JSON that can be parsed directly."""
 
     try:
         completion = groq_client.chat.completions.create(
@@ -186,19 +185,18 @@ async def parse_resume(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="File must be a PDF")
     
     try:
-        # Read the uploaded file
+        # Step 1: Read and parse the PDF
         pdf_content = await file.read()
+        pdf_text = extract_text_from_pdf(pdf_content)
         
-        # Extract text from PDF
-        text = extract_text_from_pdf(pdf_content)
-        
-        if not text.strip():
+        if not pdf_text.strip():
             raise HTTPException(status_code=400, detail="No text could be extracted from the PDF")
         
-        # Extract structured data using Groq LLM
-        parsed_data = extract_resume_data_with_groq(text)
+        # Step 2: Send the extracted text to LLM for field generation
+        json_data = extract_resume_data_with_groq(pdf_text)
         
-        return parsed_data
+        # Step 3: Return the JSON response
+        return json_data
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to process resume: {str(e)}")
