@@ -29,13 +29,30 @@ def extract_text_and_links_from_pdf(pdf_file: bytes) -> str:
     try:
         pdf_reader = PyPDF2.PdfReader(io.BytesIO(pdf_file))
         text = ""
-        for page in pdf_reader.pages:
-            text += page.extract_text() + "\n"
+        all_links = []
         
-        # Extract links from text
-        links = re.findall(r'https?://[^\s]+', text)
-        if links:
-            text += "\n\nLinks found:\n" + "\n".join(links)
+        for page in pdf_reader.pages:
+            # Extract text
+            page_text = page.extract_text()
+            text += page_text + "\n"
+            
+            # Extract links from annotations (clickable links)
+            if '/Annots' in page:
+                for annot in page['/Annots']:
+                    if annot.get_object()['/Subtype'] == '/Link':
+                        link_obj = annot.get_object()
+                        if '/A' in link_obj and '/URI' in link_obj['/A']:
+                            link_url = link_obj['/A']['/URI']
+                            all_links.append(link_url)
+        
+        # Also extract visible links from text
+        visible_links = re.findall(r'https?://[^\s]+', text)
+        all_links.extend(visible_links)
+        
+        # Remove duplicates and add to text
+        unique_links = list(set(all_links))
+        if unique_links:
+            text += "\n\nAll Links Found:\n" + "\n".join(unique_links)
         
         return text.strip()
     except Exception as e:
@@ -54,10 +71,15 @@ def generate_json_from_text(text: str) -> dict:
   "company": "Current or most recent company",
   "position": "Current or most recent job title",
   "title": "Professional title or headline",
-  "bio": "A brief professional summary (2-3 sentences)",
+  "bio": "Create a detailed professional summary (3-4 sentences) that includes: years of experience, key skills, notable achievements, and career highlights. Make it compelling and professional.",
   "website": "Personal website URL",
   "linkedin": "LinkedIn profile URL"
 }
+
+IMPORTANT: 
+- For bio: Create a comprehensive professional summary that highlights experience, skills, achievements, and career progression
+- For links: Look for both visible URLs and any link references in the text
+- Be thorough in extracting all available information
 
 Return ONLY the JSON object. No explanations, no markdown formatting, just the JSON data."""
 
