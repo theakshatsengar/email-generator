@@ -56,33 +56,6 @@ export function EmailTemplateCard({ template }: EmailTemplateCardProps) {
     window.open(gmailUrl, '_blank')
   }
 
-  const getToneColor = (tone: string) => {
-    switch (tone.toLowerCase()) {
-      case "professional":
-        return "bg-primary/10 text-primary border-primary/20"
-      case "friendly":
-        return "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20"
-      case "formal":
-        return "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
-      case "casual":
-        return "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20"
-      case "appreciative":
-        return "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20"
-      case "collaborative":
-        return "bg-pink-500/10 text-pink-600 dark:text-pink-400 border-pink-500/20"
-      case "enthusiastic":
-        return "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20"
-      case "confident":
-        return "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20"
-      case "empathetic":
-        return "bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20"
-      case "persuasive":
-        return "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20"
-      default:
-        return "bg-muted text-muted-foreground border-muted"
-    }
-  }
-
   const getSizeColor = (size: string) => {
     switch (size?.toLowerCase()) {
       case "concise":
