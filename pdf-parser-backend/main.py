@@ -4,8 +4,7 @@ import PyPDF2
 import io
 import os
 from groq import Groq
-from pydantic import BaseModel
-from typing import Optional
+from typing import Dict, Any
 import json
 from dotenv import load_dotenv
 
@@ -25,18 +24,6 @@ app.add_middleware(
 # Initialize Groq client
 groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-class ParsedResume(BaseModel):
-    name: Optional[str] = None
-    email: Optional[str] = None
-    phone: Optional[str] = None
-    location: Optional[str] = None
-    company: Optional[str] = None
-    position: Optional[str] = None
-    title: Optional[str] = None
-    bio: Optional[str] = None
-    website: Optional[str] = None
-    linkedin: Optional[str] = None
-
 def extract_text_from_pdf(pdf_file: bytes) -> str:
     """Extract text from PDF file"""
     try:
@@ -48,7 +35,7 @@ def extract_text_from_pdf(pdf_file: bytes) -> str:
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to parse PDF: {str(e)}")
 
-def extract_resume_data_with_groq(text: str) -> ParsedResume:
+def extract_resume_data_with_groq(text: str) -> Dict[str, Any]:
     """Use Groq LLM to extract structured data from resume text"""
     
     system_prompt = """You are a resume parser. Extract the following information from the resume text and return it as a JSON object. If any field is not found, set it to null.
@@ -89,7 +76,7 @@ Return ONLY the JSON object, no additional text or explanation."""
                 response_text = response_text[:-3]
             
             parsed_data = json.loads(response_text.strip())
-            return ParsedResume(**parsed_data)
+            return parsed_data
             
         except json.JSONDecodeError:
             # Fallback: try to extract basic info without LLM
@@ -99,7 +86,7 @@ Return ONLY the JSON object, no additional text or explanation."""
         # Fallback: try to extract basic info without LLM
         return extract_basic_info(text)
 
-def extract_basic_info(text: str) -> ParsedResume:
+def extract_basic_info(text: str) -> Dict[str, Any]:
     """Fallback method to extract basic information without LLM"""
     lines = text.split('\n')
     
@@ -125,20 +112,20 @@ def extract_basic_info(text: str) -> ParsedResume:
         if not name and len(line.split()) <= 4 and not '@' in line and not any(char.isdigit() for char in line):
             name = line
     
-    return ParsedResume(
-        name=name,
-        email=email,
-        phone=phone,
-        location=None,
-        company=None,
-        position=None,
-        title=None,
-        bio=None,
-        website=None,
-        linkedin=None
-    )
+    return {
+        "name": name,
+        "email": email,
+        "phone": phone,
+        "location": None,
+        "company": None,
+        "position": None,
+        "title": None,
+        "bio": None,
+        "website": None,
+        "linkedin": None
+    }
 
-@app.post("/parse-resume", response_model=ParsedResume)
+@app.post("/parse-resume")
 async def parse_resume(file: UploadFile = File(...)):
     """Parse PDF resume and extract structured data"""
     
@@ -167,6 +154,11 @@ async def parse_resume(file: UploadFile = File(...)):
 async def health_check():
     """Health check endpoint"""
     return {"status": "healthy", "service": "PDF Parser Microservice"}
+
+@app.get("/")
+async def root():
+    """Root endpoint"""
+    return {"message": "PDF Parser Microservice is running!"}
 
 if __name__ == "__main__":
     import uvicorn
