@@ -38,21 +38,31 @@ def extract_text_from_pdf(pdf_file: bytes) -> str:
 def extract_resume_data_with_groq(text: str) -> Dict[str, Any]:
     """Use Groq LLM to extract structured data from resume text"""
     
-    system_prompt = """You are a resume parser. Extract the following information from the resume text and return it as a JSON object. If any field is not found, set it to null.
+    system_prompt = """You are an expert resume parser. Your job is to extract ALL the requested information from the resume text. Be thorough and creative in finding information.
 
-Required fields:
-- name: Full name of the person
-- email: Email address
-- phone: Phone number
-- location: City, State/Country
-- company: Current or most recent company
-- position: Current or most recent job title
-- title: Professional title or headline
-- bio: A brief professional summary (2-3 sentences)
-- website: Personal website URL
-- linkedin: LinkedIn profile URL
+IMPORTANT: For each field, if you cannot find the exact information, make a reasonable inference or generate appropriate content based on the resume context.
 
-Return ONLY the JSON object, no additional text or explanation."""
+Required fields to extract:
+- name: Full name of the person (usually at the top)
+- email: Email address (look for @ symbol)
+- phone: Phone number (any format)
+- location: City, State/Country (look for address or location info)
+- company: Current or most recent company name
+- position: Current or most recent job title/role
+- title: Professional title or headline (e.g., "Software Engineer", "Product Manager")
+- bio: Generate a 2-3 sentence professional summary based on their experience and skills
+- website: Personal website URL (look for http/https links, excluding LinkedIn)
+- linkedin: LinkedIn profile URL (look for linkedin.com links)
+
+EXTRACTION RULES:
+1. For bio: Create a compelling professional summary based on their experience, skills, and achievements
+2. For title: Extract their main professional title or create one based on their role
+3. For location: Look for city, state, or country mentions
+4. For website: Find any personal website, portfolio, or GitHub links
+5. For linkedin: Find LinkedIn profile URL
+6. If a field is truly not found, use null, but try to be thorough
+
+Return ONLY a valid JSON object with all these fields. Do not include any explanations or markdown formatting."""
 
     try:
         completion = groq_client.chat.completions.create(
@@ -94,6 +104,12 @@ def extract_basic_info(text: str) -> Dict[str, Any]:
     name = None
     email = None
     phone = None
+    location = None
+    company = None
+    position = None
+    title = None
+    website = None
+    linkedin = None
     
     for line in lines:
         line = line.strip()
@@ -109,20 +125,57 @@ def extract_basic_info(text: str) -> Dict[str, Any]:
             phone = line
             
         # Extract name (first non-empty line that looks like a name)
-        if not name and len(line.split()) <= 4 and not '@' in line and not any(char.isdigit() for char in line):
+        if not name and len(line.split()) <= 4 and not '@' in line and not any(char.isdigit() for char in line) and not 'http' in line.lower():
             name = line
+            
+        # Extract location (look for city, state patterns)
+        if not location and (',' in line) and any(word.isupper() for word in line.split()):
+            location = line
+            
+        # Extract company (look for company-like names)
+        if not company and len(line.split()) <= 3 and not '@' in line and not 'http' in line.lower():
+            company = line
+            
+        # Extract position/title
+        if not position and ('engineer' in line.lower() or 'manager' in line.lower() or 'developer' in line.lower() or 'designer' in line.lower()):
+            position = line
+            
+        # Extract website
+        if not website and 'http' in line.lower() and 'linkedin' not in line.lower():
+            website = line
+            
+        # Extract LinkedIn
+        if not linkedin and 'linkedin' in line.lower():
+            linkedin = line
+    
+    # Generate a basic bio based on extracted info
+    bio_parts = []
+    if name:
+        bio_parts.append(f"{name} is a")
+    if position:
+        bio_parts.append(position)
+    else:
+        bio_parts.append("professional")
+    if company:
+        bio_parts.append(f"at {company}")
+    bio_parts.append("with experience in their field.")
+    
+    bio = " ".join(bio_parts) if bio_parts else "Experienced professional with relevant skills and background."
+    
+    # Set title based on position
+    title = position if position else "Professional"
     
     return {
         "name": name,
         "email": email,
         "phone": phone,
-        "location": None,
-        "company": None,
-        "position": None,
-        "title": None,
-        "bio": None,
-        "website": None,
-        "linkedin": None
+        "location": location,
+        "company": company,
+        "position": position,
+        "title": title,
+        "bio": bio,
+        "website": website,
+        "linkedin": linkedin
     }
 
 @app.post("/parse-resume")
